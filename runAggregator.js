@@ -22,7 +22,7 @@ async function readAllFiles() {
 
   for (const file of files) {
     const filePath = path.join(uploadsDir, file);
-    await new Promise((resolve) => {
+    await new Promise(resolve => {
       fs.createReadStream(filePath)
         .pipe(csv())
         .on('data', row => {
@@ -44,7 +44,10 @@ async function updateBigCommerce(inventoryMap) {
     try {
       const res = await axios.get(`${BASE_URL}/catalog/products?sku=${sku}`, { headers });
       const product = res.data.data[0];
-      if (!product) continue;
+      if (!product) {
+        console.warn(`SKU not found in BigCommerce: ${sku}`);
+        continue;
+      }
 
       const inventoryRes = await axios.get(`${BASE_URL}/inventory/products/${product.id}`, { headers });
       const locations = inventoryRes.data.data;
@@ -55,16 +58,16 @@ async function updateBigCommerce(inventoryMap) {
         }, { headers });
       }
 
-      console.log(`Updated ${sku} with qty ${totalQty}`);
+      console.log(`✔ Updated SKU: ${sku} with total qty: ${totalQty}`);
     } catch (err) {
-      console.error(`Error updating ${sku}:`, err.message);
+      console.error(`✖ Failed SKU ${sku}:`, err.response?.data || err.message);
     }
   }
 }
 
 async function run() {
-  const map = await readAllFiles();
-  await updateBigCommerce(map);
+  const inventoryMap = await readAllFiles();
+  await updateBigCommerce(inventoryMap);
 }
 
 run();
