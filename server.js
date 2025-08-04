@@ -3,6 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { aggregateInventory } from './runAggregator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,7 +25,7 @@ const upload = multer({ storage });
 
 app.get('/', (req, res) => {
   res.send(`
-    <h2>Upload CSV</h2>
+    <h2>Upload CSV Files</h2>
     <form action="/upload" method="post" enctype="multipart/form-data">
       <input type="file" name="csvFiles" multiple required />
       <button type="submit">Run Aggregation</button>
@@ -33,18 +34,18 @@ app.get('/', (req, res) => {
 });
 
 app.post('/upload', upload.array('csvFiles', 10), async (req, res) => {
-  const filePath = path.join(publicDir, `aggregated-${Date.now()}.csv`);
-  const headers = 'Location ID,SKU,Current Stock\n';
-  const rows = ['1001,GLOCK19,12', '1002,P365,7'].join('\n');
-  fs.writeFileSync(filePath, headers + rows);
+  try {
+    const filePath = await aggregateInventory(publicDir);
+    const publicFile = path.basename(filePath);
 
-  const publicFile = path.basename(filePath);
-  console.log(`✅ Fake aggregated CSV written to ${filePath}`);
-
-  res.send(`
-    <h3>Test Aggregation Complete</h3>
-    <a href="/${publicFile}" download>⬇ Download CSV</a>
-  `);
+    res.send(`
+      <h3>✅ Aggregation Complete</h3>
+      <a href="/${publicFile}" download>⬇ Download Aggregated CSV</a>
+    `);
+  } catch (err) {
+    console.error('❌ Aggregation failed:', err);
+    res.status(500).send('Aggregation failed');
+  }
 });
 
 app.use(express.static(publicDir));
