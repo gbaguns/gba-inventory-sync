@@ -66,6 +66,7 @@ async function updateBigCommerce(inventoryMap) {
     try {
       console.log(`🔎 Raw location map for SKU ${sku}:`, locationMapRaw);
 
+      // Confirm Map conversion
       const locationMap = locationMapRaw instanceof Map
         ? locationMapRaw
         : new Map(Object.entries(locationMapRaw));
@@ -88,27 +89,18 @@ async function updateBigCommerce(inventoryMap) {
         console.log(` - Location ID: ${loc.location_id}, Current Stock: ${loc.stock_level}`);
       });
 
-      let locArray = [];
+      const locArray = [...locationMap.entries()];
+      console.log(`📦 locArray contents:`, locArray);
 
-      try {
-        if (locationMap instanceof Map) {
-          console.log('🔧 Confirmed: locationMap is a Map');
-          locArray = Array.from(locationMap.entries());
-        } else if (typeof locationMap === 'object') {
-          console.log('🔧 Fallback: converting plain object to locArray');
-          locArray = Object.entries(locationMap);
-        } else {
-          console.error('🚨 locationMap is not iterable:', locationMap);
-        }
-
-        console.log(`📦 locArray contents:`, locArray);
-      } catch (e) {
-        console.error('❌ Error converting locationMap to array:', e.message);
+      if (locArray.length === 0) {
+        console.warn(`⚠️ locArray is empty for SKU ${sku}`);
         continue;
       }
 
-      for (const [locationId, qty] of locArray) {
+      for (let i = 0; i < locArray.length; i++) {
+        const [locationId, qty] = locArray[i];
         const locIdNum = parseInt(locationId, 10);
+
         console.log(`⚙️ Preparing to update SKU ${sku} at Location ${locIdNum} with stock: ${qty}`);
 
         try {
