@@ -3,7 +3,6 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { aggregateInventory } from './runAggregator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,10 +12,12 @@ const publicDir = path.join(__dirname, 'public');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Ensure dirs
 [uploadsDir, publicDir].forEach(dir => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
+// Multer setup
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`)
@@ -27,10 +28,9 @@ app.use(express.static(publicDir));
 
 app.get('/', (req, res) => {
   res.send(`
-    <h2>Upload CSV Files</h2>
+    <h2>Upload CSV</h2>
     <form action="/upload" method="post" enctype="multipart/form-data">
-      <input type="file" name="csvFiles" multiple required accept=".csv" />
-      <br><br>
+      <input type="file" name="csvFiles" multiple required />
       <button type="submit">Run Aggregation</button>
     </form>
   `);
@@ -38,20 +38,25 @@ app.get('/', (req, res) => {
 
 app.post('/upload', upload.array('csvFiles', 10), async (req, res) => {
   try {
-    const uploaded = req.files.map(f => f.filename);
-    console.log("✅ Received files:", uploaded);
+    const filePath = path.join(publicDir, `aggregated-${Date.now()}.csv`);
+    const headers = 'Location ID,SKU,Current Stock\n';
+    const rows = [
+      '1001,GLOCK19,12',
+      '1002,GLOCK19,8',
+      '1003,P365,5'
+    ].join('\n');
+    fs.writeFileSync(filePath, headers + rows);
 
-    const aggregatedFilePath = await aggregateInventory(publicDir);
-    const publicFilename = path.basename(aggregatedFilePath);
+    const publicFile = path.basename(filePath);
+    console.log(`✅ Fake aggregated CSV written to ${filePath}`);
 
     res.send(`
-      <h3>✅ Aggregation Complete</h3>
-      <p>${uploaded.length} file(s) processed.</p>
-      <a href="/${publicFilename}" download>⬇ Download Aggregated CSV</a>
+      <h3>Test Aggregation Complete</h3>
+      <a href="/${publicFile}" download>⬇ Download CSV</a>
     `);
   } catch (err) {
-    console.error("❌ Aggregation failed:", err);
-    res.status(500).send('Aggregation failed');
+    console.error("❌ Upload failed:", err);
+    res.status(500).send("Upload failed");
   }
 });
 
