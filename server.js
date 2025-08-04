@@ -4,7 +4,7 @@ import session from 'express-session';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { aggregateInventory } from './runaggregator.js';
+import { aggregateInventory } from './runAggregator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
