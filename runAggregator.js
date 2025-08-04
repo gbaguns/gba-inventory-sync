@@ -41,7 +41,7 @@ export async function aggregateInventory() {
 
   const parser = new Parser({ fields: ['Location ID', 'SKU', 'Current Stock'] });
   const csvData = parser.parse(outputRows);
-  const outputPath = path.join(uploadsDir, `aggregated-${Date.now()}.csv`);
+  const outputPath = path.join(__dirname, 'public', `aggregated-${Date.now()}.csv`);
   fs.writeFileSync(outputPath, csvData);
   console.log(`✅ Aggregated CSV written to: ${outputPath}`);
   return outputPath;
