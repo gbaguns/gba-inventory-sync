@@ -17,7 +17,7 @@ const headers = {
 };
 
 async function readAllFiles() {
-  const inventoryMap = new Map(); // Map<SKU, Map<LocationID, Qty>>
+  const inventoryMap = new Map();
   const files = fs.readdirSync(uploadsDir).filter(f => f.endsWith('.csv'));
 
   for (const file of files) {
@@ -90,36 +90,36 @@ async function updateBigCommerce(inventoryMap) {
 
       let locArray = [];
 
-try {
-  if (locationMap instanceof Map) {
-    console.log('🔧 Confirmed: locationMap is a Map');
-    locArray = Array.from(locationMap.entries());
-  } else if (typeof locationMap === 'object') {
-    console.log('🔧 Fallback: converting plain object to locArray');
-    locArray = Object.entries(locationMap);
-  } else {
-    console.error('🚨 locationMap is not iterable:', locationMap);
-  }
+      try {
+        if (locationMap instanceof Map) {
+          console.log('🔧 Confirmed: locationMap is a Map');
+          locArray = Array.from(locationMap.entries());
+        } else if (typeof locationMap === 'object') {
+          console.log('🔧 Fallback: converting plain object to locArray');
+          locArray = Object.entries(locationMap);
+        } else {
+          console.error('🚨 locationMap is not iterable:', locationMap);
+        }
 
-  console.log(`📦 locArray contents:`, locArray);
-} catch (e) {
-  console.error('❌ Error converting locationMap to array:', e.message);
-}
+        console.log(`📦 locArray contents:`, locArray);
+      } catch (e) {
+        console.error('❌ Error converting locationMap to array:', e.message);
+        continue;
+      }
 
-for (const [locationId, qty] of locArray) {
-  const locIdNum = parseInt(locationId, 10);
-  console.log(`⚙️ Preparing to update SKU ${sku} at Location ${locIdNum} with stock: ${qty}`);
+      for (const [locationId, qty] of locArray) {
+        const locIdNum = parseInt(locationId, 10);
+        console.log(`⚙️ Preparing to update SKU ${sku} at Location ${locIdNum} with stock: ${qty}`);
 
-  try {
-    const response = await axios.put(`${BASE_URL}/inventory/products/${product.id}/locations/${locIdNum}`, {
-      stock_level: qty
-    }, { headers });
+        try {
+          const response = await axios.put(`${BASE_URL}/inventory/products/${product.id}/locations/${locIdNum}`, {
+            stock_level: qty
+          }, { headers });
 
-    console.log(`✅ API Response for Location ${locIdNum}:`, JSON.stringify(response.data, null, 2));
-  } catch (updateErr) {
-    console.error(`❌ Failed to update location ${locIdNum} for SKU ${sku}:`, JSON.stringify(updateErr.response?.data, null, 2) || updateErr.message);
-  }
-}
+          console.log(`✅ API Response for Location ${locIdNum}:`, JSON.stringify(response.data, null, 2));
+        } catch (updateErr) {
+          console.error(`❌ Failed to update location ${locIdNum} for SKU ${sku}:`, JSON.stringify(updateErr.response?.data, null, 2) || updateErr.message);
+        }
       }
 
       console.log(`✔ Finished updating SKU: ${sku}`);
