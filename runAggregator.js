@@ -9,7 +9,7 @@ dotenv.config();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsDir = path.join(__dirname, 'uploads');
 
-const BASE_URL = `https://api.bigcommerce.com/stores/${process.env.STORE_HASH}/v3`;
+const BASE_URL = `https://api.bigcommerce.com/stores/${process.env.STORE_HASH}/v3/inventory/adjustments/absolute`;
 const headers = {
   'X-Auth-Token': process.env.ACCESS_TOKEN,
   'Accept': 'application/json',
