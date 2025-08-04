@@ -17,7 +17,7 @@ const headers = {
 };
 
 async function readAllFiles() {
-  const inventoryMap = new Map(); // Map<SKU, Map<LocationID, Qty>>
+  const inventoryMap = new Map();
   const files = fs.readdirSync(uploadsDir).filter(f => f.endsWith('.csv'));
 
   for (const file of files) {
@@ -82,9 +82,16 @@ async function updateBigCommerce(inventoryMap) {
       const locations = inventoryRes.data.data;
 
       const currentStockByLocation = new Map();
-      locations.forEach(loc => {
-        currentStockByLocation.set(String(loc.location_id), loc.stock_level);
-      });
+
+      if (!locations || locations.length === 0) {
+        console.warn(`⚠️ No location inventory returned for SKU ${sku}`);
+      } else {
+        console.log(`📍 Available Locations for SKU ${sku}:`);
+        locations.forEach(loc => {
+          console.log(` - Location ID: ${loc.location_id}, Current Stock: ${loc.stock_level}`);
+          currentStockByLocation.set(String(loc.location_id), loc.stock_level);
+        });
+      }
 
       const locArray = [...locationMap.entries()];
 
