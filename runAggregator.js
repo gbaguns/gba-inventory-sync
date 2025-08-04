@@ -43,19 +43,20 @@ async function updateBigCommerce(inventoryMap) {
   for (const [sku, totalQty] of inventoryMap.entries()) {
     try {
       const res = await axios.get(`${BASE_URL}/catalog/products?sku=${sku}`, { headers });
-const product = res.data.data[0];
+      const product = res.data.data[0];
 
-if (!product) {
-  console.warn(`❗ SKU NOT FOUND in BigCommerce: ${sku}`);
-  continue;
-} else {
-  console.log(`✅ Found SKU in BigCommerce: ${sku} → Product ID: ${product.id}`);
-}
+      if (!product) {
+        console.warn(`❗ SKU NOT FOUND in BigCommerce: ${sku}`);
+        continue;
+      } else {
+        console.log(`✅ Found SKU in BigCommerce: ${sku} → Product ID: ${product.id}`);
+      }
 
       const inventoryRes = await axios.get(`${BASE_URL}/inventory/products/${product.id}`, { headers });
       const locations = inventoryRes.data.data;
 
       for (const loc of locations) {
+        console.log(`🔄 Updating location ${loc.location_id} with stock: ${totalQty}`);
         await axios.put(`${BASE_URL}/inventory/products/${product.id}/locations/${loc.location_id}`, {
           stock_level: totalQty
         }, { headers });
@@ -63,7 +64,7 @@ if (!product) {
 
       console.log(`✔ Updated SKU: ${sku} with total qty: ${totalQty}`);
     } catch (err) {
-      console.error(`✖ Failed SKU ${sku}:`, err.response?.data || err.message);
+      console.error(`✖ Failed SKU ${sku}:`, JSON.stringify(err.response?.data, null, 2) || err.message);
     }
   }
 }
