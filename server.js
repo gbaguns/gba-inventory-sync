@@ -12,18 +12,15 @@ const publicDir = path.join(__dirname, 'public');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Ensure dirs
 [uploadsDir, publicDir].forEach(dir => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
-// Multer setup
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`)
 });
 const upload = multer({ storage });
-
 
 app.get('/', (req, res) => {
   res.send(`
@@ -36,27 +33,18 @@ app.get('/', (req, res) => {
 });
 
 app.post('/upload', upload.array('csvFiles', 10), async (req, res) => {
-  try {
-    const filePath = path.join(publicDir, `aggregated-${Date.now()}.csv`);
-    const headers = 'Location ID,SKU,Current Stock\n';
-    const rows = [
-      '1001,GLOCK19,12',
-      '1002,GLOCK19,8',
-      '1003,P365,5'
-    ].join('\n');
-    fs.writeFileSync(filePath, headers + rows);
+  const filePath = path.join(publicDir, `aggregated-${Date.now()}.csv`);
+  const headers = 'Location ID,SKU,Current Stock\n';
+  const rows = ['1001,GLOCK19,12', '1002,P365,7'].join('\n');
+  fs.writeFileSync(filePath, headers + rows);
 
-    const publicFile = path.basename(filePath);
-    console.log(`✅ Fake aggregated CSV written to ${filePath}`);
+  const publicFile = path.basename(filePath);
+  console.log(`✅ Fake aggregated CSV written to ${filePath}`);
 
-    res.send(`
-      <h3>Test Aggregation Complete</h3>
-      <a href="/${publicFile}" download>⬇ Download CSV</a>
-    `);
-  } catch (err) {
-    console.error("❌ Upload failed:", err);
-    res.status(500).send("Upload failed");
-  }
+  res.send(`
+    <h3>Test Aggregation Complete</h3>
+    <a href="/${publicFile}" download>⬇ Download CSV</a>
+  `);
 });
 
 app.use(express.static(publicDir));
