@@ -64,6 +64,13 @@ async function readAllFiles() {
 async function updateBigCommerce(inventoryMap) {
   for (const [sku, locationMapRaw] of inventoryMap.entries()) {
     try {
+      console.log(`🔎 Raw location map for SKU ${sku}:`, locationMapRaw);
+
+      // Force convert to Map if not already
+      const locationMap = locationMapRaw instanceof Map
+        ? locationMapRaw
+        : new Map(Object.entries(locationMapRaw));
+
       const res = await axios.get(`${BASE_URL}/catalog/products?sku=${sku}`, { headers });
       const product = res.data.data[0];
 
@@ -81,8 +88,6 @@ async function updateBigCommerce(inventoryMap) {
       locations.forEach(loc => {
         console.log(` - Location ID: ${loc.location_id}, Current Stock: ${loc.stock_level}`);
       });
-
-      const locationMap = new Map(locationMapRaw); // FIXED
 
       for (const [locationId, qty] of locationMap.entries()) {
         console.log(`🔄 Updating SKU ${sku} at Location ${locationId} with stock: ${qty}`);
