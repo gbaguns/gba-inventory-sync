@@ -17,7 +17,7 @@ const headers = {
 };
 
 async function readAllFiles() {
-  const inventoryMap = new Map();
+  const inventoryMap = new Map(); // Map<SKU, Map<LocationID, Qty>>
   const files = fs.readdirSync(uploadsDir).filter(f => f.endsWith('.csv'));
 
   for (const file of files) {
@@ -64,9 +64,6 @@ async function readAllFiles() {
 async function updateBigCommerce(inventoryMap) {
   for (const [sku, locationMapRaw] of inventoryMap.entries()) {
     try {
-      console.log(`🔎 Raw location map for SKU ${sku}:`, locationMapRaw);
-
-      // Confirm Map conversion
       const locationMap = locationMapRaw instanceof Map
         ? locationMapRaw
         : new Map(Object.entries(locationMapRaw));
@@ -84,37 +81,40 @@ async function updateBigCommerce(inventoryMap) {
       const inventoryRes = await axios.get(`${BASE_URL}/inventory/products/${product.id}`, { headers });
       const locations = inventoryRes.data.data;
 
-      console.log(`📍 Available Locations for SKU ${sku}:`);
+      const currentStockByLocation = new Map();
       locations.forEach(loc => {
-        console.log(` - Location ID: ${loc.location_id}, Current Stock: ${loc.stock_level}`);
+        currentStockByLocation.set(String(loc.location_id), loc.stock_level);
       });
 
       const locArray = [...locationMap.entries()];
-      console.log(`📦 locArray contents:`, locArray);
 
-      if (locArray.length === 0) {
-        console.warn(`⚠️ locArray is empty for SKU ${sku}`);
-        continue;
-      }
-
-      for (let i = 0; i < locArray.length; i++) {
-        const [locationId, qty] = locArray[i];
+      for (const [locationId, desiredQty] of locArray) {
         const locIdNum = parseInt(locationId, 10);
+        const currentQty = currentStockByLocation.get(String(locIdNum)) ?? 0;
+        const delta = desiredQty - currentQty;
 
-        console.log(`⚙️ Preparing to update SKU ${sku} at Location ${locIdNum} with stock: ${qty}`);
+        console.log(`📊 SKU: ${sku} | Location: ${locIdNum} | Current: ${currentQty} | Target: ${desiredQty} | Delta: ${delta}`);
+
+        if (delta === 0) {
+          console.log(`⏩ No adjustment needed for SKU ${sku} at Location ${locIdNum}`);
+          continue;
+        }
 
         try {
-          const response = await axios.put(`${BASE_URL}/inventory/products/${product.id}/locations/${locIdNum}`, {
-            stock_level: qty
+          const response = await axios.post(`${BASE_URL}/inventory/adjustments`, {
+            product_id: product.id,
+            location_id: locIdNum,
+            quantity_delta: delta,
+            reason: 'Adjusted via CSV import'
           }, { headers });
 
-          console.log(`✅ API Response for Location ${locIdNum}:`, JSON.stringify(response.data, null, 2));
-        } catch (updateErr) {
-          console.error(`❌ Failed to update location ${locIdNum} for SKU ${sku}:`, JSON.stringify(updateErr.response?.data, null, 2) || updateErr.message);
+          console.log(`✅ Inventory adjusted for SKU ${sku} at Location ${locIdNum}:`, JSON.stringify(response.data, null, 2));
+        } catch (adjustmentErr) {
+          console.error(`❌ Failed adjustment for SKU ${sku} at Location ${locIdNum}:`, JSON.stringify(adjustmentErr.response?.data, null, 2) || adjustmentErr.message);
         }
       }
 
-      console.log(`✔ Finished updating SKU: ${sku}`);
+      console.log(`✔ Finished processing SKU: ${sku}`);
     } catch (err) {
       console.error(`✖ Failed SKU ${sku}:`, JSON.stringify(err.response?.data, null, 2) || err.message);
     }
