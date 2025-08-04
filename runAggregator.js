@@ -17,7 +17,6 @@ const headers = {
 };
 
 async function readAllFiles() {
-  async function readAllFiles() {
   const inventoryMap = new Map(); // Map<sku, Map<locationId, quantity>>
   const files = fs.readdirSync(uploadsDir).filter(f => f.endsWith('.csv'));
 
@@ -44,11 +43,11 @@ async function readAllFiles() {
     });
   }
 
-  return inventoryMap; // Map<sku, Map<locationId, quantity>>
+  return inventoryMap;
 }
 
 async function updateBigCommerce(inventoryMap) {
-  for (const [sku, totalQty] of inventoryMap.entries()) {
+  for (const [sku, locationMap] of inventoryMap.entries()) {
     try {
       const res = await axios.get(`${BASE_URL}/catalog/products?sku=${sku}`, { headers });
       const product = res.data.data[0];
@@ -56,22 +55,18 @@ async function updateBigCommerce(inventoryMap) {
       if (!product) {
         console.warn(`❗ SKU NOT FOUND in BigCommerce: ${sku}`);
         continue;
-      } else {
-        console.log(`✅ Found SKU in BigCommerce: ${sku} → Product ID: ${product.id}`);
       }
 
-      const inventoryRes = await axios.get(`${BASE_URL}/inventory/products/${product.id}`, { headers });
-      const locations = inventoryRes.data.data;
+      console.log(`✅ Found SKU in BigCommerce: ${sku} → Product ID: ${product.id}`);
 
-      const skuMap = inventoryMap.get(sku);
-for (const [locationId, qty] of skuMap.entries()) {
-  console.log(`🔄 Updating SKU ${sku} at Location ${locationId} with stock: ${qty}`);
-  await axios.put(`${BASE_URL}/inventory/products/${product.id}/locations/${locationId}`, {
-    stock_level: qty
-  }, { headers });
-}
+      for (const [locationId, qty] of locationMap.entries()) {
+        console.log(`🔄 Updating SKU ${sku} at Location ${locationId} with stock: ${qty}`);
+        await axios.put(`${BASE_URL}/inventory/products/${product.id}/locations/${locationId}`, {
+          stock_level: qty
+        }, { headers });
+      }
 
-      console.log(`✔ Updated SKU: ${sku} with total qty: ${totalQty}`);
+      console.log(`✔ Updated SKU: ${sku}`);
     } catch (err) {
       console.error(`✖ Failed SKU ${sku}:`, JSON.stringify(err.response?.data, null, 2) || err.message);
     }
