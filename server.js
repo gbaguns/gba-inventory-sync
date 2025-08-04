@@ -8,19 +8,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Serve frontend
+const upload = multer({ dest: path.join(__dirname, 'uploads/') });
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/downloads', express.static(path.join(__dirname, 'uploads')));
 
-// Set up multer for file uploads
-const upload = multer({ dest: path.join(__dirname, 'uploads/') });
-
-// File upload endpoint
 app.post('/upload', upload.array('files'), (req, res) => {
   res.json({ success: true, message: 'Files uploaded' });
 });
 
-// Trigger aggregation script
 app.post('/aggregate', (req, res) => {
   exec('node runAggregator.js', (err, stdout, stderr) => {
     if (err) {
