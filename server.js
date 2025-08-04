@@ -42,13 +42,16 @@ app.get('/', (req, res) => {
 // Upload + Aggregate
 app.post('/upload', upload.array('csvFiles', 10), async (req, res) => {
   try {
-    console.log("✅ Received files:", req.files.map(f => f.originalname));
-    const aggregatedFilePath = await aggregateInventory(publicDir); // pass destination
+    const uploaded = req.files.map(f => f.filename);
+    console.log("✅ Received files:", uploaded);
+
+    const aggregatedFilePath = await aggregateInventory(publicDir);
     const publicFilename = path.basename(aggregatedFilePath);
 
     res.send(`
       <h3>✅ Aggregation Complete</h3>
-      <a href="/${publicFilename}" download>Download Aggregated CSV</a>
+      <p>${uploaded.length} file(s) processed.</p>
+      <a href="/${publicFilename}" download>⬇ Download Aggregated CSV</a>
     `);
   } catch (err) {
     console.error("❌ Aggregation failed:", err);
