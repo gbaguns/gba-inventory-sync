@@ -17,26 +17,34 @@ const headers = {
 };
 
 async function readAllFiles() {
-  const inventoryMap = new Map();
+  async function readAllFiles() {
+  const inventoryMap = new Map(); // Map<sku, Map<locationId, quantity>>
   const files = fs.readdirSync(uploadsDir).filter(f => f.endsWith('.csv'));
 
   for (const file of files) {
     const filePath = path.join(uploadsDir, file);
-    await new Promise(resolve => {
+    await new Promise((resolve) => {
       fs.createReadStream(filePath)
         .pipe(csv())
         .on('data', row => {
-          const sku = row.SKU?.trim();
-          const qty = parseInt(row.Stock_Level || 0, 10);
-          if (sku) {
-            inventoryMap.set(sku, (inventoryMap.get(sku) || 0) + qty);
+          const locationId = row['Location ID']?.trim();
+          const sku = row['SKU']?.trim();
+          const qty = parseInt(row['Current Stock'] || 0, 10);
+          if (!sku || !locationId) return;
+
+          if (!inventoryMap.has(sku)) {
+            inventoryMap.set(sku, new Map());
           }
+
+          const skuMap = inventoryMap.get(sku);
+          const currentQty = skuMap.get(locationId) || 0;
+          skuMap.set(locationId, currentQty + qty);
         })
         .on('end', resolve);
     });
   }
 
-  return inventoryMap;
+  return inventoryMap; // Map<sku, Map<locationId, quantity>>
 }
 
 async function updateBigCommerce(inventoryMap) {
@@ -55,12 +63,13 @@ async function updateBigCommerce(inventoryMap) {
       const inventoryRes = await axios.get(`${BASE_URL}/inventory/products/${product.id}`, { headers });
       const locations = inventoryRes.data.data;
 
-      for (const loc of locations) {
-        console.log(`🔄 Updating location ${loc.location_id} with stock: ${totalQty}`);
-        await axios.put(`${BASE_URL}/inventory/products/${product.id}/locations/${loc.location_id}`, {
-          stock_level: totalQty
-        }, { headers });
-      }
+      const skuMap = inventoryMap.get(sku);
+for (const [locationId, qty] of skuMap.entries()) {
+  console.log(`🔄 Updating SKU ${sku} at Location ${locationId} with stock: ${qty}`);
+  await axios.put(`${BASE_URL}/inventory/products/${product.id}/locations/${locationId}`, {
+    stock_level: qty
+  }, { headers });
+}
 
       console.log(`✔ Updated SKU: ${sku} with total qty: ${totalQty}`);
     } catch (err) {
