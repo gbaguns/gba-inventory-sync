@@ -4,10 +4,11 @@ import csv from 'csv-parser';
 import { fileURLToPath } from 'url';
 import { Parser } from 'json2csv';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const uploadsDir = path.join(__dirname, 'uploads');
 
-export async function aggregateInventory() {
+export async function aggregateInventory(outputDir = uploadsDir) {
   const inventoryMap = new Map();
   const files = fs.readdirSync(uploadsDir).filter(f => f.endsWith('.csv'));
 
@@ -41,7 +42,9 @@ export async function aggregateInventory() {
 
   const parser = new Parser({ fields: ['Location ID', 'SKU', 'Current Stock'] });
   const csvData = parser.parse(outputRows);
-  const outputPath = path.join(__dirname, 'public', `aggregated-${Date.now()}.csv`);
+
+  // ✅ Write output file to the specified directory
+  const outputPath = path.join(outputDir, `aggregated-${Date.now()}.csv`);
   fs.writeFileSync(outputPath, csvData);
   console.log(`✅ Aggregated CSV written to: ${outputPath}`);
   return outputPath;
