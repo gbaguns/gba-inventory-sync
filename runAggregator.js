@@ -101,7 +101,7 @@ async function updateBigCommerce(inventoryMap) {
   } catch (updateErr) {
     console.error(`❌ Failed to update location ${locationId} for SKU ${sku}:`, JSON.stringify(updateErr.response?.data, null, 2) || updateErr.message);
   }
-}
+ }
 }
 
 async function run() {
