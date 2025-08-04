@@ -19,12 +19,9 @@ export async function aggregateInventory() {
       fs.createReadStream(filePath)
         .pipe(csv())
         .on('data', row => {
-          console.log(`📄 Row: ${JSON.stringify(row)}`);
-
           const locationId = row['Location ID']?.trim();
           const sku = row['SKU']?.trim();
           const qty = parseInt(row['Current Stock'] || 0, 10);
-
           if (!sku || !locationId || isNaN(qty)) return;
 
           if (!inventoryMap.has(sku)) inventoryMap.set(sku, new Map());
@@ -44,14 +41,8 @@ export async function aggregateInventory() {
 
   const parser = new Parser({ fields: ['Location ID', 'SKU', 'Current Stock'] });
   const csvData = parser.parse(outputRows);
-
-  // ✅ Create a uniquely named output file
-  const timestamp = Date.now();
-  const outputFilename = `aggregated-${timestamp}.csv`;
-  const outputPath = path.join(uploadsDir, outputFilename);
-
+  const outputPath = path.join(uploadsDir, `aggregated-${Date.now()}.csv`);
   fs.writeFileSync(outputPath, csvData);
   console.log(`✅ Aggregated CSV written to: ${outputPath}`);
-
   return outputPath;
 }
