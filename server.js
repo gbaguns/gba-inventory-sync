@@ -24,7 +24,6 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-app.use(express.static(publicDir));
 
 app.get('/', (req, res) => {
   res.send(`
@@ -59,6 +58,8 @@ app.post('/upload', upload.array('csvFiles', 10), async (req, res) => {
     res.status(500).send("Upload failed");
   }
 });
+
+app.use(express.static(publicDir));
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
