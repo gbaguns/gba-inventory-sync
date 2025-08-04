@@ -1,33 +1,37 @@
-import express from 'express';
-import path from 'path';
-import multer from 'multer';
-import { fileURLToPath } from 'url';
-import { exec } from 'child_process';
+import session from 'express-session';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const app = express();
-const PORT = process.env.PORT || 3000;
+// Setup session middleware
+app.use(session({
+  secret: 'gba-secret-key',
+  resave: false,
+  saveUninitialized: true,
+}));
 
-const upload = multer({ dest: path.join(__dirname, 'uploads/') });
-
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/downloads', express.static(path.join(__dirname, 'uploads')));
-
-app.post('/upload', upload.array('files'), (req, res) => {
-  res.json({ success: true, message: 'Files uploaded' });
+// Upload route
+app.post('/upload', upload.array('csvFiles', 10), async (req, res) => {
+  try {
+    const aggregatedFilePath = await aggregateCSVFiles('./uploads');
+    req.session.aggregatedFilePath = aggregatedFilePath;
+    res.redirect('/download-ready');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Aggregation failed');
+  }
 });
 
-app.post('/aggregate', (req, res) => {
-  exec('node runAggregator.js', (err, stdout, stderr) => {
-    if (err) {
-      console.error('Aggregation Error:', err);
-      return res.status(500).json({ success: false, error: stderr });
-    }
-    console.log(stdout);
-    res.json({ success: true, message: 'Aggregation complete' });
-  });
+// Page after aggregation to allow download
+app.get('/download-ready', (req, res) => {
+  res.send(`
+    <h2>Aggregation Complete</h2>
+    <a href="/download">Download Aggregated CSV</a>
+  `);
 });
 
-app.listen(PORT, () => {
-  console.log(`Inventory Dashboard running on port ${PORT}`);
+// Serve the correct file from session
+app.get('/download', (req, res) => {
+  const file = req.session.aggregatedFilePath;
+  if (!file || !fs.existsSync(file)) {
+    return res.status(404).send('No file to download. Please upload and aggregate again.');
+  }
+  res.download(file);
 });
