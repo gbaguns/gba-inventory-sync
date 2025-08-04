@@ -1,1 +1,29 @@
+services:
+  - type: web
+    name: gba-inventory-dashboard
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: STORE_HASH
+        fromEnvVar: STORE_HASH
+      - key: ACCESS_TOKEN
+        fromEnvVar: ACCESS_TOKEN
+    disk:
+      name: inventory-disk
+      mountPath: /opt/render/project/src/uploads
+      sizeGB: 1
 
+  - type: worker
+    name: gba-inventory-worker
+    runtime: node
+    buildCommand: npm install
+    startCommand: node runAggregator.js
+    envVars:
+      - key: STORE_HASH
+        fromEnvVar: STORE_HASH
+      - key: ACCESS_TOKEN
+        fromEnvVar: ACCESS_TOKEN
+    disk:
+      name: inventory-disk
+      mountPath: /opt/render/project/src/uploads
