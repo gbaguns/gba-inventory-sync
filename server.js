@@ -58,7 +58,7 @@ app.get('/download', (req, res) => {
   }
   res.download(file, (err) => {
     if (!err) {
-      console.log(\`✅ File downloaded: \${file}\`);
+      console.log(`✅ File downloaded: ${file}`);
     }
   });
 });
