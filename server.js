@@ -13,12 +13,10 @@ const publicDir = path.join(__dirname, 'public');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Ensure uploads and public folders exist
 [uploadsDir, publicDir].forEach(dir => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
-// Multer storage setup
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`)
@@ -27,19 +25,17 @@ const upload = multer({ storage });
 
 app.use(express.static(publicDir));
 
-// Upload form
 app.get('/', (req, res) => {
   res.send(`
     <h2>Upload CSV Files</h2>
     <form action="/upload" method="post" enctype="multipart/form-data">
-      <input type="file" name="csvFiles" accept=".csv" multiple required />
+      <input type="file" name="csvFiles" multiple required accept=".csv" />
       <br><br>
       <button type="submit">Run Aggregation</button>
     </form>
   `);
 });
 
-// Upload + Aggregate
 app.post('/upload', upload.array('csvFiles', 10), async (req, res) => {
   try {
     const uploaded = req.files.map(f => f.filename);
@@ -59,7 +55,6 @@ app.post('/upload', upload.array('csvFiles', 10), async (req, res) => {
   }
 });
 
-// Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
