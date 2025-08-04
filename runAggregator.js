@@ -59,16 +59,25 @@ async function updateBigCommerce(inventoryMap) {
 
       console.log(`✅ Found SKU in BigCommerce: ${sku} → Product ID: ${product.id}`);
 
+      const inventoryRes = await axios.get(`${BASE_URL}/inventory/products/${product.id}`, { headers });
+      const locations = inventoryRes.data.data;
+
+      console.log(`📍 Available Locations for SKU ${sku}:`);
+      locations.forEach(loc => {
+        console.log(` - Location ID: ${loc.location_id}, Current Stock: ${loc.stock_level}`);
+      });
+
       for (const [locationId, qty] of locationMap.entries()) {
         console.log(`🔄 Updating SKU ${sku} at Location ${locationId} with stock: ${qty}`);
-        const response = await axios.put(`${BASE_URL}/inventory/products/${product.id}/locations/${locationId}`, {
-  stock_level: qty
-}, { headers });
 
-console.log(`📝 BigCommerce API Response:`, JSON.stringify(response.data, null, 2));
+        const response = await axios.put(`${BASE_URL}/inventory/products/${product.id}/locations/${locationId}`, {
+          stock_level: qty
+        }, { headers });
+
+        console.log(`📝 BigCommerce API Response:`, JSON.stringify(response.data, null, 2));
       }
 
-      console.log(`✔ Updated SKU: ${sku}`);
+      console.log(`✔ Finished updating SKU: ${sku}`);
     } catch (err) {
       console.error(`✖ Failed SKU ${sku}:`, JSON.stringify(err.response?.data, null, 2) || err.message);
     }
