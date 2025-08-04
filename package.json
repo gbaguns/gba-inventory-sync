@@ -2,16 +2,15 @@
   "name": "gba-inventory-sync",
   "version": "1.0.0",
   "type": "module",
-  "main": "server.js",
+  "main": "runAggregator.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node runAggregator.js"
   },
   "dependencies": {
-    "json2csv": "^6.0.0"
     "axios": "^1.6.8",
     "csv-parser": "^3.0.0",
-    "dotenv": "^16.3.1",
+    "dotenv": "^16.0.3",
     "express": "^4.18.2",
-    "express-fileupload": "^1.4.0"
+    "json2csv": "^6.0.0"
   }
 }
