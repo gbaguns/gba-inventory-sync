@@ -61,9 +61,11 @@ async function updateBigCommerce(inventoryMap) {
 
       for (const [locationId, qty] of locationMap.entries()) {
         console.log(`🔄 Updating SKU ${sku} at Location ${locationId} with stock: ${qty}`);
-        await axios.put(`${BASE_URL}/inventory/products/${product.id}/locations/${locationId}`, {
-          stock_level: qty
-        }, { headers });
+        const response = await axios.put(`${BASE_URL}/inventory/products/${product.id}/locations/${locationId}`, {
+  stock_level: qty
+}, { headers });
+
+console.log(`📝 BigCommerce API Response:`, JSON.stringify(response.data, null, 2));
       }
 
       console.log(`✔ Updated SKU: ${sku}`);
