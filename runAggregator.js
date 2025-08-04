@@ -17,7 +17,7 @@ const headers = {
 };
 
 async function readAllFiles() {
-  const inventoryMap = new Map();
+  const inventoryMap = new Map(); // Map<SKU, Map<LocationID, Qty>>
   const files = fs.readdirSync(uploadsDir).filter(f => f.endsWith('.csv'));
 
   for (const file of files) {
@@ -34,7 +34,7 @@ async function readAllFiles() {
           const sku = row['SKU']?.trim();
           const qty = parseInt(row['Current Stock'] || 0, 10);
 
-          if (!sku || !locationId) {
+          if (!sku || !locationId || isNaN(qty)) {
             console.warn(`⚠️ Skipping row with missing data: ${JSON.stringify(row)}`);
             return;
           }
@@ -66,7 +66,6 @@ async function updateBigCommerce(inventoryMap) {
     try {
       console.log(`🔎 Raw location map for SKU ${sku}:`, locationMapRaw);
 
-      // Force convert to Map if not already
       const locationMap = locationMapRaw instanceof Map
         ? locationMapRaw
         : new Map(Object.entries(locationMapRaw));
@@ -90,18 +89,25 @@ async function updateBigCommerce(inventoryMap) {
       });
 
       for (const [locationId, qty] of locationMap.entries()) {
-  console.log(`⚙️ Preparing to update SKU ${sku} at Location ${locationId} with stock: ${qty}`);
+        const locIdNum = parseInt(locationId, 10);
+        console.log(`⚙️ Preparing to update SKU ${sku} at Location ${locIdNum} with stock: ${qty}`);
 
-  try {
-    const response = await axios.put(`${BASE_URL}/inventory/products/${product.id}/locations/${locationId}`, {
-      stock_level: qty
-    }, { headers });
+        try {
+          const response = await axios.put(`${BASE_URL}/inventory/products/${product.id}/locations/${locIdNum}`, {
+            stock_level: qty
+          }, { headers });
 
-    console.log(`✅ API Response for Location ${locationId}:`, JSON.stringify(response.data, null, 2));
-  } catch (updateErr) {
-    console.error(`❌ Failed to update location ${locationId} for SKU ${sku}:`, JSON.stringify(updateErr.response?.data, null, 2) || updateErr.message);
+          console.log(`✅ API Response for Location ${locIdNum}:`, JSON.stringify(response.data, null, 2));
+        } catch (updateErr) {
+          console.error(`❌ Failed to update location ${locIdNum} for SKU ${sku}:`, JSON.stringify(updateErr.response?.data, null, 2) || updateErr.message);
+        }
+      }
+
+      console.log(`✔ Finished updating SKU: ${sku}`);
+    } catch (err) {
+      console.error(`✖ Failed SKU ${sku}:`, JSON.stringify(err.response?.data, null, 2) || err.message);
+    }
   }
- }
 }
 
 async function run() {
