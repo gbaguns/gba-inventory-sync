@@ -8,10 +8,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const uploadsDir = path.join(__dirname, 'uploads');
 
-export async function aggregateInventory(outputDir = './public') {
+export async function aggregateInventory(outputDir = path.join(__dirname, 'public')) {
   const inventoryMap = new Map();
-  const files = fs.readdirSync(uploadsDir)
-    .filter(f => f.endsWith('.csv') && !f.startsWith('aggregated-'));
+  const files = fs.readdirSync(uploadsDir).filter(f =>
+    f.endsWith('.csv') && !f.startsWith('aggregated') && !f.toLowerCase().includes('test')
+  );
 
   for (const file of files) {
     const filePath = path.join(uploadsDir, file);
@@ -46,5 +47,9 @@ export async function aggregateInventory(outputDir = './public') {
   const outputPath = path.join(outputDir, `aggregated-${Date.now()}.csv`);
   fs.writeFileSync(outputPath, csvData);
   console.log(`✅ Aggregated CSV written to: ${outputPath}`);
+
+  // Optional: clean up uploads
+  files.forEach(file => fs.unlinkSync(path.join(uploadsDir, file)));
+
   return outputPath;
 }
