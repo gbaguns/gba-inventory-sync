@@ -90,8 +90,6 @@ async function updateBigCommerce(inventoryMap) {
 
       const locArray = Array.from(locationMap.entries());
 
-const locArray = Array.from(locationMap.entries());
-
       for (const [locationId, qty] of locArray) {
         const locIdNum = parseInt(locationId, 10);
         console.log(`⚙️ Preparing to update SKU ${sku} at Location ${locIdNum} with stock: ${qty}`);
@@ -106,6 +104,12 @@ const locArray = Array.from(locationMap.entries());
           console.error(`❌ Failed to update location ${locIdNum} for SKU ${sku}:`, JSON.stringify(updateErr.response?.data, null, 2) || updateErr.message);
         }
       }
+
+      console.log(`✔ Finished updating SKU: ${sku}`);
+    } catch (err) {
+      console.error(`✖ Failed SKU ${sku}:`, JSON.stringify(err.response?.data, null, 2) || err.message);
+    }
+  }
 }
 
 async function run() {
