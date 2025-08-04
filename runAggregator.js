@@ -88,21 +88,38 @@ async function updateBigCommerce(inventoryMap) {
         console.log(` - Location ID: ${loc.location_id}, Current Stock: ${loc.stock_level}`);
       });
 
-      const locArray = Array.from(locationMap.entries());
+      let locArray = [];
 
-      for (const [locationId, qty] of locArray) {
-        const locIdNum = parseInt(locationId, 10);
-        console.log(`⚙️ Preparing to update SKU ${sku} at Location ${locIdNum} with stock: ${qty}`);
+try {
+  if (locationMap instanceof Map) {
+    console.log('🔧 Confirmed: locationMap is a Map');
+    locArray = Array.from(locationMap.entries());
+  } else if (typeof locationMap === 'object') {
+    console.log('🔧 Fallback: converting plain object to locArray');
+    locArray = Object.entries(locationMap);
+  } else {
+    console.error('🚨 locationMap is not iterable:', locationMap);
+  }
 
-        try {
-          const response = await axios.put(`${BASE_URL}/inventory/products/${product.id}/locations/${locIdNum}`, {
-            stock_level: qty
-          }, { headers });
+  console.log(`📦 locArray contents:`, locArray);
+} catch (e) {
+  console.error('❌ Error converting locationMap to array:', e.message);
+}
 
-          console.log(`✅ API Response for Location ${locIdNum}:`, JSON.stringify(response.data, null, 2));
-        } catch (updateErr) {
-          console.error(`❌ Failed to update location ${locIdNum} for SKU ${sku}:`, JSON.stringify(updateErr.response?.data, null, 2) || updateErr.message);
-        }
+for (const [locationId, qty] of locArray) {
+  const locIdNum = parseInt(locationId, 10);
+  console.log(`⚙️ Preparing to update SKU ${sku} at Location ${locIdNum} with stock: ${qty}`);
+
+  try {
+    const response = await axios.put(`${BASE_URL}/inventory/products/${product.id}/locations/${locIdNum}`, {
+      stock_level: qty
+    }, { headers });
+
+    console.log(`✅ API Response for Location ${locIdNum}:`, JSON.stringify(response.data, null, 2));
+  } catch (updateErr) {
+    console.error(`❌ Failed to update location ${locIdNum} for SKU ${sku}:`, JSON.stringify(updateErr.response?.data, null, 2) || updateErr.message);
+  }
+}
       }
 
       console.log(`✔ Finished updating SKU: ${sku}`);
