@@ -1,1 +1,31 @@
+<div>
+  <form id="upload-form" enctype="multipart/form-data">
+    <input type="file" name="files" multiple />
+    <button type="submit">Upload Files</button>
+  </form>
 
+  <button id="run-aggregator">Run Aggregation</button>
+
+  <div id="download-section" style="display: none;">
+    <a href="/downloads/aggregated_inventory.csv" download>⬇️ Download Aggregated CSV</a>
+  </div>
+</div>
+
+<script>
+document.getElementById('upload-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = new FormData(e.target);
+  await fetch('/upload', { method: 'POST', body: form });
+  alert('Files uploaded.');
+});
+
+document.getElementById('run-aggregator').addEventListener('click', async () => {
+  const res = await fetch('/aggregate', { method: 'POST' });
+  const data = await res.json();
+  if (data.success) {
+    document.getElementById('download-section').style.display = 'block';
+  } else {
+    alert('Aggregation failed');
+  }
+});
+</script>
