@@ -17,19 +17,27 @@ const headers = {
 };
 
 async function readAllFiles() {
-  const inventoryMap = new Map(); // Map<sku, Map<locationId, quantity>>
+  const inventoryMap = new Map();
   const files = fs.readdirSync(uploadsDir).filter(f => f.endsWith('.csv'));
 
   for (const file of files) {
     const filePath = path.join(uploadsDir, file);
+    console.log(`📥 Reading file: ${file}`);
+
     await new Promise((resolve) => {
       fs.createReadStream(filePath)
         .pipe(csv())
         .on('data', row => {
+          console.log(`📄 Row: ${JSON.stringify(row)}`);
+
           const locationId = row['Location ID']?.trim();
           const sku = row['SKU']?.trim();
           const qty = parseInt(row['Current Stock'] || 0, 10);
-          if (!sku || !locationId) return;
+
+          if (!sku || !locationId) {
+            console.warn(`⚠️ Skipping row with missing data: ${JSON.stringify(row)}`);
+            return;
+          }
 
           if (!inventoryMap.has(sku)) {
             inventoryMap.set(sku, new Map());
@@ -41,6 +49,13 @@ async function readAllFiles() {
         })
         .on('end', resolve);
     });
+  }
+
+  console.log(`✅ Parsed inventory map:`);
+  for (const [sku, locMap] of inventoryMap.entries()) {
+    for (const [locId, qty] of locMap.entries()) {
+      console.log(` - SKU: ${sku}, Location: ${locId}, Qty: ${qty}`);
+    }
   }
 
   return inventoryMap;
