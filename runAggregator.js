@@ -62,7 +62,8 @@ async function readAllFiles() {
 }
 
 async function updateBigCommerce(inventoryMap) {
-  for (const [sku, locationMap] of inventoryMap.entries()) {
+  for (const [sku, locationMapRaw] of inventoryMap.entries()) {
+  const locationMap = new Map(locationMapRaw); // convert to proper Map if needed {
     try {
       const res = await axios.get(`${BASE_URL}/catalog/products?sku=${sku}`, { headers });
       const product = res.data.data[0];
