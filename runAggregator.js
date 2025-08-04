@@ -1,24 +1,18 @@
 import fs from 'fs';
 import path from 'path';
 import csv from 'csv-parser';
-import axios from 'axios';
+import { Parser as CsvParser } from 'json2csv';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 
 dotenv.config();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsDir = path.join(__dirname, 'uploads');
+const outputFilePath = path.join(uploadsDir, 'aggregated_inventory.csv');
 
-const BASE_URL = `https://api.bigcommerce.com/stores/${process.env.STORE_HASH}/v3/inventory/adjustments/absolute`;
-const headers = {
-  'X-Auth-Token': process.env.ACCESS_TOKEN,
-  'Accept': 'application/json',
-  'Content-Type': 'application/json'
-};
-
-async function readAllFiles() {
-  const inventoryMap = new Map();
-  const files = fs.readdirSync(uploadsDir).filter(f => f.endsWith('.csv'));
+async function readAndAggregateFiles() {
+  const inventoryMap = new Map(); // Map<SKU, Map<LocationID, Qty>>
+  const files = fs.readdirSync(uploadsDir).filter(f => f.endsWith('.csv') && f !== 'aggregated_inventory.csv');
 
   for (const file of files) {
     const filePath = path.join(uploadsDir, file);
@@ -51,86 +45,36 @@ async function readAllFiles() {
     });
   }
 
-  console.log(`✅ Parsed inventory map:`);
+  // Convert the Map to an array of rows
+  const resultRows = [];
   for (const [sku, locMap] of inventoryMap.entries()) {
     for (const [locId, qty] of locMap.entries()) {
-      console.log(` - SKU: ${sku}, Location: ${locId}, Qty: ${qty}`);
+      resultRows.push({
+        SKU: sku,
+        'Location ID': locId,
+        'Total Quantity': qty
+      });
     }
   }
 
-  return inventoryMap;
+  return resultRows;
 }
 
-async function updateBigCommerce(inventoryMap) {
-  for (const [sku, locationMapRaw] of inventoryMap.entries()) {
-    try {
-      const locationMap = locationMapRaw instanceof Map
-        ? locationMapRaw
-        : new Map(Object.entries(locationMapRaw));
+async function writeAggregatedCSV(rows) {
+  const csvParser = new CsvParser({ fields: ['SKU', 'Location ID', 'Total Quantity'] });
+  const csvData = csvParser.parse(rows);
 
-      const res = await axios.get(`${BASE_URL}/catalog/products?sku=${sku}`, { headers });
-      const product = res.data.data[0];
-
-      if (!product) {
-        console.warn(`❗ SKU NOT FOUND in BigCommerce: ${sku}`);
-        continue;
-      }
-
-      console.log(`✅ Found SKU in BigCommerce: ${sku} → Product ID: ${product.id}`);
-
-      const inventoryRes = await axios.get(`${BASE_URL}/inventory/products/${product.id}`, { headers });
-      const locations = inventoryRes.data.data;
-
-      const currentStockByLocation = new Map();
-
-      if (!locations || locations.length === 0) {
-        console.warn(`⚠️ No location inventory returned for SKU ${sku}`);
-      } else {
-        console.log(`📍 Available Locations for SKU ${sku}:`);
-        locations.forEach(loc => {
-          console.log(` - Location ID: ${loc.location_id}, Current Stock: ${loc.stock_level}`);
-          currentStockByLocation.set(String(loc.location_id), loc.stock_level);
-        });
-      }
-
-      const locArray = [...locationMap.entries()];
-
-      for (const [locationId, desiredQty] of locArray) {
-        const locIdNum = parseInt(locationId, 10);
-        const currentQty = currentStockByLocation.get(String(locIdNum)) ?? 0;
-        const delta = desiredQty - currentQty;
-
-        console.log(`📊 SKU: ${sku} | Location: ${locIdNum} | Current: ${currentQty} | Target: ${desiredQty} | Delta: ${delta}`);
-
-        if (delta === 0) {
-          console.log(`⏩ No adjustment needed for SKU ${sku} at Location ${locIdNum}`);
-          continue;
-        }
-
-        try {
-          const response = await axios.post(`${BASE_URL}/inventory/adjustments`, {
-            product_id: product.id,
-            location_id: locIdNum,
-            quantity_delta: delta,
-            reason: 'Adjusted via CSV import'
-          }, { headers });
-
-          console.log(`✅ Inventory adjusted for SKU ${sku} at Location ${locIdNum}:`, JSON.stringify(response.data, null, 2));
-        } catch (adjustmentErr) {
-          console.error(`❌ Failed adjustment for SKU ${sku} at Location ${locIdNum}:`, JSON.stringify(adjustmentErr.response?.data, null, 2) || adjustmentErr.message);
-        }
-      }
-
-      console.log(`✔ Finished processing SKU: ${sku}`);
-    } catch (err) {
-      console.error(`✖ Failed SKU ${sku}:`, JSON.stringify(err.response?.data, null, 2) || err.message);
-    }
-  }
+  fs.writeFileSync(outputFilePath, csvData);
+  console.log(`✅ Aggregated CSV written to: ${outputFilePath}`);
 }
 
 async function run() {
-  const inventoryMap = await readAllFiles();
-  await updateBigCommerce(inventoryMap);
+  const aggregatedRows = await readAndAggregateFiles();
+  if (aggregatedRows.length === 0) {
+    console.log('⚠️ No valid inventory data found to aggregate.');
+  } else {
+    await writeAggregatedCSV(aggregatedRows);
+  }
 }
 
 run();
