@@ -1,60 +1,37 @@
 import express from 'express';
-import fileUpload from 'express-fileupload';
-import fs from 'fs';
 import path from 'path';
-import { exec } from 'child_process';
+import multer from 'multer';
 import { fileURLToPath } from 'url';
+import { exec } from 'child_process';
 
-const app = express();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const uploadsDir = path.join(__dirname, 'uploads');
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
+// Serve frontend
+app.use(express.static(path.join(__dirname, 'public')));
+app.use('/downloads', express.static(path.join(__dirname, 'uploads')));
 
-app.use(fileUpload());
-app.use(express.urlencoded({ extended: true }));
+// Set up multer for file uploads
+const upload = multer({ dest: path.join(__dirname, 'uploads/') });
 
-app.get('/', (req, res) => {
-  const html = `
-    <h2>Upload Inventory Files</h2>
-    <form method="POST" encType="multipart/form-data">
-      <input type="file" name="files" multiple><br><br>
-      <button type="submit">Upload Files</button>
-    </form>
-    <br><hr><br>
-    <form method="POST" action="/run">
-      <button type="submit">Run Aggregation & Update BigCommerce</button>
-    </form>
-    <br>
-    <a href="/files">View Uploaded Files</a>
-  `;
-  res.send(html);
+// File upload endpoint
+app.post('/upload', upload.array('files'), (req, res) => {
+  res.json({ success: true, message: 'Files uploaded' });
 });
 
-app.post('/', (req, res) => {
-  if (!req.files || !req.files.files) {
-    return res.status(400).send('No files uploaded.');
-  }
-
-  const uploaded = Array.isArray(req.files.files) ? req.files.files : [req.files.files];
-  uploaded.forEach(file => {
-    const filepath = path.join(uploadsDir, file.name);
-    file.mv(filepath);
-  });
-
-  res.send('Files uploaded successfully.<br><a href="/">Back</a>');
-});
-
-app.post('/run', (req, res) => {
+// Trigger aggregation script
+app.post('/aggregate', (req, res) => {
   exec('node runAggregator.js', (err, stdout, stderr) => {
-    if (err) return res.send(`<pre>Error:\n${stderr}</pre><a href="/">Back</a>`);
-    res.send(`<pre>${stdout}</pre><br><a href="/">Back</a>`);
+    if (err) {
+      console.error('Aggregation Error:', err);
+      return res.status(500).json({ success: false, error: stderr });
+    }
+    console.log(stdout);
+    res.json({ success: true, message: 'Aggregation complete' });
   });
 });
 
-app.get('/files', (req, res) => {
-  const files = fs.readdirSync(uploadsDir);
-  res.send(`<ul>${files.map(f => `<li>${f}</li>`).join('')}</ul><a href="/">Back</a>`);
+app.listen(PORT, () => {
+  console.log(`Inventory Dashboard running on port ${PORT}`);
 });
-
-app.listen(3000, () => console.log('Inventory Dashboard running on port 3000'));
