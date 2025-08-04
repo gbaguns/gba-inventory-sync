@@ -45,10 +45,10 @@ app.post('/upload', upload.array('csvFiles', 10), async (req, res) => {
 });
 
 app.get('/download-ready', (req, res) => {
-  res.send(\`
-    <h3>✅ Aggregation Complete</h3>
-    <a href="/download">Download Aggregated CSV</a>
-  \`);
+res.send(`
+  <h3>✅ Aggregation Complete</h3>
+  <a href="/download">Download Aggregated CSV</a>
+`);
 });
 
 app.get('/download', (req, res) => {
