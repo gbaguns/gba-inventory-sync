@@ -43,11 +43,14 @@ async function updateBigCommerce(inventoryMap) {
   for (const [sku, totalQty] of inventoryMap.entries()) {
     try {
       const res = await axios.get(`${BASE_URL}/catalog/products?sku=${sku}`, { headers });
-      const product = res.data.data[0];
-      if (!product) {
-        console.warn(`SKU not found in BigCommerce: ${sku}`);
-        continue;
-      }
+const product = res.data.data[0];
+
+if (!product) {
+  console.warn(`❗ SKU NOT FOUND in BigCommerce: ${sku}`);
+  continue;
+} else {
+  console.log(`✅ Found SKU in BigCommerce: ${sku} → Product ID: ${product.id}`);
+}
 
       const inventoryRes = await axios.get(`${BASE_URL}/inventory/products/${product.id}`, { headers });
       const locations = inventoryRes.data.data;
